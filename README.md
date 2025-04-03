@@ -382,33 +382,41 @@ graph TD
     style D fill:#ff9900,stroke:#333,stroke-width:2px
 ```
 
-## Auto-Remediation with AWS SSM
+## Auto-Remediation with Ansible and AWS SSM
 
 ```mermaid
 graph TD
-    subgraph "Incident Detection"
-        A[Anomaly Detection] --> B[Incident Creation]
-        B --> C[Severity Assessment]
-        C --> D[Resource Identification]
+    subgraph "Ansible Control Node"
+        A[Ansible Playbook] --> B[SSM Document Execution]
+        B --> C[Status Tracking]
+        C --> D[Notification System]
     end
 
-    subgraph "Remediation Planning"
-        E[Action Selection] --> F[Risk Assessment]
-        F --> G[Approval Flow]
-        G --> H[SSM Document Selection]
+    subgraph "AWS SSM"
+        E[SSM Document] --> F[Command Execution]
+        F --> G[Parameter Management]
+        G --> H[Output Collection]
     end
 
-    subgraph "Execution"
-        I[Pre-Remediation Check] --> J[Execute Action]
-        J --> K[Post-Remediation Check]
-        K --> L[Status Update]
+    subgraph "Resource Management"
+        I[EC2 Instances] --> J[Auto Scaling Groups]
+        K[RDS Databases] --> L[S3 Buckets]
+        M[Lambda Functions] --> N[API Gateway]
     end
 
-    subgraph "Verification"
-        M[Metrics Analysis] --> N[Health Check]
-        N --> O[Incident Resolution]
-        O --> P[Documentation]
+    subgraph "Monitoring & Feedback"
+        O[CloudWatch Metrics] --> P[Log Collection]
+        Q[Status Updates] --> R[Incident Tracking]
+        S[Health Checks] --> T[Verification]
     end
+
+    A --> E
+    E --> I
+    E --> K
+    E --> M
+    F --> O
+    H --> Q
+    T --> C
 
     style A fill:#ff9900,stroke:#333,stroke-width:2px
     style B fill:#ff9900,stroke:#333,stroke-width:2px
@@ -416,42 +424,133 @@ graph TD
     style D fill:#ff9900,stroke:#333,stroke-width:2px
 ```
 
-### Auto-Remediation Features
+### Ansible Integration Features
 
-- **Automated Actions**:
-  - Instance Restart
-  - Auto Scaling Group Scale Up/Down
-  - RDS Backup and Recovery
-  - S3 Cleanup
-  - Custom Remediation Actions
+- **Playbook Management**:
+  - Dynamic inventory management
+  - Role-based execution
+  - Variable templating
+  - Conditional execution
+  - Error handling and retries
 
-- **Safety Measures**:
-  - Pre and Post Remediation Checks
-  - Risk Assessment
-  - Approval Workflows
-  - Rollback Capabilities
+- **SSM Document Integration**:
+  - Document versioning
+  - Parameter validation
+  - Output collection
+  - Status tracking
+  - Error handling
 
-- **Integration**:
-  - AWS Systems Manager Documents
-  - CloudWatch Metrics
-  - SNS Notifications
-  - DynamoDB Status Tracking
+- **Resource Management**:
+  - Multi-resource support
+  - State management
+  - Dependency handling
+  - Rollback capabilities
+  - Health verification
 
-### Setup Instructions
+### Ansible Playbook Structure
 
-1. Install Ansible and required collections:
+```yaml
+# Example playbook structure
+---
+- name: Auto-Remediation Playbook
+  hosts: localhost
+  gather_facts: false
+  vars:
+    aws_region: "{{ aws_region | default('us-west-2') }}"
+    incident_id: "{{ incident_id }}"
+    severity: "{{ severity }}"
+    resource_id: "{{ resource_id }}"
+    resource_type: "{{ resource_type }}"
+    remediation_action: "{{ remediation_action }}"
+    ssm_document_name: "{{ ssm_document_name | default('AIOpsGuardian-Remediation') }}"
+
+  tasks:
+    - name: Get AWS SSM Document
+      amazon.aws.ssm_document_info:
+        name: "{{ ssm_document_name }}"
+        region: "{{ aws_region }}"
+      register: ssm_doc
+
+    - name: Execute SSM Document
+      amazon.aws.ssm_document_execution:
+        document_name: "{{ ssm_document_name }}"
+        parameters:
+          IncidentId: "{{ incident_id }}"
+          Severity: "{{ severity }}"
+          ResourceId: "{{ resource_id }}"
+          ResourceType: "{{ resource_type }}"
+          RemediationAction: "{{ remediation_action }}"
+        region: "{{ aws_region }}"
+      register: execution_result
+      when: ssm_doc.documents is defined and ssm_doc.documents | length > 0
+
+    - name: Update Incident Status
+      amazon.aws.dynamodb_table:
+        name: "AIOpsGuardian-Incidents"
+        region: "{{ aws_region }}"
+        operation: update_item
+        key:
+          IncidentId: "{{ incident_id }}"
+        attributes:
+          RemediationStatus: "{{ 'COMPLETED' if execution_result.status == 'SUCCESS' else 'FAILED' }}"
+          RemediationResult: "{{ execution_result.output }}"
+          LastUpdated: "{{ ansible_date_time.iso8601 }}"
+      when: execution_result is defined
+
+    - name: Send SNS Notification
+      amazon.aws.sns_topic:
+        region: "{{ aws_region }}"
+        topic_arn: "arn:aws:sns:{{ aws_region }}:{{ aws_account_id }}:AIOpsGuardian-Remediation"
+        message: |
+          Remediation executed for incident {{ incident_id }}
+          Status: {{ execution_result.status if execution_result is defined else 'FAILED' }}
+          Resource: {{ resource_id }}
+          Action: {{ remediation_action }}
+        subject: "AIOps Guardian - Remediation {{ execution_result.status if execution_result is defined else 'FAILED' }}"
+      when: execution_result is defined
+
+    - name: Log Remediation Result
+      amazon.aws.cloudwatch_log:
+        region: "{{ aws_region }}"
+        log_group: "/aws/aiops-guardian/remediation"
+        log_stream: "{{ incident_id }}"
+        message: |
+          {
+            "timestamp": "{{ ansible_date_time.iso8601 }}",
+            "incident_id": "{{ incident_id }}",
+            "resource_id": "{{ resource_id }}",
+            "remediation_action": "{{ remediation_action }}",
+            "status": "{{ execution_result.status if execution_result is defined else 'FAILED' }}",
+            "result": "{{ execution_result.output if execution_result is defined else 'No execution result' }}"
+          }
+      when: execution_result is defined
+```
+
+### Setup and Configuration
+
+1. **Install Ansible and AWS Collections**:
    ```bash
+   # Install Ansible
    pip install ansible
+
+   # Install required collections
    ansible-galaxy collection install -r ansible/requirements.yml
    ```
 
-2. Configure AWS credentials:
+2. **Configure AWS Credentials**:
    ```bash
+   # Configure AWS CLI
    aws configure
+
+   # Or set environment variables
+   export AWS_ACCESS_KEY_ID="your_access_key"
+   export AWS_SECRET_ACCESS_KEY="your_secret_key"
+   export AWS_DEFAULT_REGION="us-west-2"
    ```
 
-3. Create SSM Document:
+3. **Create SSM Document**:
    ```bash
+   # Create the SSM document
    aws ssm create-document \
      --content file://ansible/ssm_documents/remediation_document.json \
      --name "AIOpsGuardian-Remediation" \
@@ -459,15 +558,52 @@ graph TD
      --document-format "JSON"
    ```
 
-4. Run remediation playbook:
+4. **Run Remediation Playbook**:
    ```bash
+   # Basic execution
    ansible-playbook ansible/playbooks/auto_remediation.yml \
      -e "incident_id=INC-123" \
      -e "severity=HIGH" \
      -e "resource_id=i-1234567890abcdef0" \
      -e "resource_type=EC2" \
      -e "remediation_action=RESTART"
+
+   # With additional variables
+   ansible-playbook ansible/playbooks/auto_remediation.yml \
+     -e "incident_id=INC-123" \
+     -e "severity=HIGH" \
+     -e "resource_id=i-1234567890abcdef0" \
+     -e "resource_type=EC2" \
+     -e "remediation_action=RESTART" \
+     -e "aws_region=us-west-2" \
+     -e "ssm_document_name=AIOpsGuardian-Remediation-v2"
    ```
+
+### Best Practices
+
+1. **Playbook Organization**:
+   - Use roles for modularity
+   - Implement proper error handling
+   - Include documentation
+   - Use variables for flexibility
+
+2. **SSM Document Management**:
+   - Version control documents
+   - Implement parameter validation
+   - Include proper error handling
+   - Document all actions
+
+3. **Security Considerations**:
+   - Use IAM roles
+   - Implement least privilege
+   - Secure sensitive data
+   - Audit all actions
+
+4. **Monitoring and Logging**:
+   - Track all executions
+   - Monitor performance
+   - Log all actions
+   - Implement alerts
 
 ## Features
 
@@ -596,3 +732,179 @@ graph TD
 ## License
 
 MIT 
+
+## Vector Search for Incident Similarity
+
+The AIOps Guardian system implements advanced vector search capabilities using both traditional embeddings and BERT-based embeddings for incident similarity search. This dual-embedding approach provides enhanced semantic understanding and improved search accuracy.
+
+### Architecture
+
+```mermaid
+graph TD
+    A[Incident Data] --> B[Text Preprocessing]
+    B --> C[Traditional Embeddings]
+    B --> D[BERT Embeddings]
+    C --> E[FAISS Index]
+    D --> F[BERT FAISS Index]
+    G[Search Query] --> H[Query Processing]
+    H --> I[Traditional Search]
+    H --> J[BERT Search]
+    I --> K[Results Aggregation]
+    J --> K
+    K --> L[Similar Incidents]
+    M[DynamoDB] --> N[Incident Details]
+    L --> N
+```
+
+### Features
+
+1. **Dual Embedding System**
+   - Traditional embeddings for fast, general-purpose search
+   - BERT-based embeddings for deep semantic understanding
+   - Configurable embedding selection per query
+
+2. **BERT Integration**
+   - Uses BERT-base-uncased model for contextual understanding
+   - CLS token embeddings for document representation
+   - Cosine similarity for semantic matching
+   - Normalized embeddings for consistent comparison
+
+3. **Vector Search Capabilities**
+   - Semantic similarity search
+   - Hybrid search combining both embedding types
+   - Configurable similarity thresholds
+   - Real-time index updates
+
+### Example Queries
+
+1. **Basic BERT Search**
+```python
+# Search using BERT-base model
+POST /api/v1/vector-search/search
+{
+    "query": "high CPU usage causing service degradation",
+    "k": 5,
+    "use_bert": true,
+    "model_type": "BERT_BASE"
+}
+```
+
+2. **Hybrid Search**
+```python
+# Combine BERT and traditional search
+POST /api/v1/vector-search/search
+{
+    "query": "service latency spike in production",
+    "k": 5,
+    "use_bert": true,
+    "use_hybrid": true,
+    "hybrid_weight": 0.7,
+    "model_type": "BERT_LARGE"
+}
+```
+
+3. **Text Similarity**
+```python
+# Compare two incident descriptions
+POST /api/v1/vector-search/similarity
+{
+    "text1": "service latency spike in user-facing API",
+    "text2": "increased response time in production endpoints",
+    "model_type": "ROBERTA"
+}
+```
+
+### Monitoring Metrics
+
+The BERT integration includes comprehensive CloudWatch metrics:
+
+1. **Performance Metrics**
+   - `SearchDuration`: Time taken for search operations
+   - `SimilarityCalculationDuration`: Time for similarity calculations
+   - `IndexBuildDuration`: Time for index building/updating
+   - `QueryLength`: Length of search queries
+   - `ResultCount`: Number of results returned
+
+2. **Model Metrics**
+   - `ModelType`: Type of BERT model used
+   - `DocumentCount`: Number of documents in index
+   - `SimilarityScore`: Similarity scores between texts
+   - `UseHybrid`: Whether hybrid search was used
+   - `HybridWeight`: Weight used in hybrid search
+
+3. **Resource Metrics**
+   - `GPUUtilization`: GPU usage for BERT inference
+   - `MemoryUsage`: Memory consumption
+   - `BatchSize`: Size of embedding batches
+   - `CacheHitRate`: Cache hit rate for embeddings
+
+### Example CloudWatch Dashboard
+
+```json
+{
+    "widgets": [
+        {
+            "type": "metric",
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    ["AIOpsGuardian/BERT", "SearchDuration", "ModelType", "BERT_BASE"],
+                    ["AIOpsGuardian/BERT", "SearchDuration", "ModelType", "BERT_LARGE"],
+                    ["AIOpsGuardian/BERT", "SearchDuration", "ModelType", "ROBERTA"]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "us-west-2",
+                "title": "Search Duration by Model"
+            }
+        },
+        {
+            "type": "metric",
+            "x": 12,
+            "y": 0,
+            "width": 12,
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    ["AIOpsGuardian/BERT", "SimilarityScore"],
+                    [".", "SimilarityScore", "ModelType", "BERT_BASE"],
+                    [".", "SimilarityScore", "ModelType", "BERT_LARGE"]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "us-west-2",
+                "title": "Similarity Scores by Model"
+            }
+        }
+    ]
+}
+```
+
+### Best Practices for BERT Integration
+
+1. **Model Selection**
+   - Use BERT-base for general-purpose search
+   - Use BERT-large for complex queries requiring deep understanding
+   - Use RoBERTa for better performance on longer texts
+   - Use DistilBERT for resource-constrained environments
+
+2. **Hybrid Search Configuration**
+   - Adjust hybrid weight based on query complexity
+   - Use higher BERT weight for semantic queries
+   - Use higher traditional weight for keyword-based queries
+   - Monitor performance metrics to optimize weights
+
+3. **Performance Optimization**
+   - Batch process embeddings for multiple documents
+   - Cache frequently used embeddings
+   - Use GPU acceleration when available
+   - Implement request rate limiting
+
+4. **Monitoring and Alerts**
+   - Set up CloudWatch alarms for high latency
+   - Monitor model performance metrics
+   - Track resource utilization
+   - Alert on error rates and failures
