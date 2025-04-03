@@ -1,0 +1,268 @@
+{
+  "Comment": "AIOps Guardian - Incident Management and Resolution Workflow",
+  "StartAt": "DetectAnomaly",
+  "States": {
+    "DetectAnomaly": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${AnomalyDetectionFunction}",
+        "Payload": {
+          "metrics": "$.metrics",
+          "thresholds": "$.thresholds",
+          "cloudwatch_metrics": "$.cloudwatch_metrics"
+        }
+      },
+      "Next": "CheckAnomalySeverity",
+      "Catch": [{
+        "ErrorEquals": ["States.ALL"],
+        "Next": "HandleError"
+      }]
+    },
+    "CheckAnomalySeverity": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.severity",
+          "StringEquals": "critical",
+          "Next": "CreateCriticalIncident"
+        },
+        {
+          "Variable": "$.severity",
+          "StringEquals": "high",
+          "Next": "CreateHighPriorityIncident"
+        },
+        {
+          "Variable": "$.severity",
+          "StringEquals": "medium",
+          "Next": "CreateMediumPriorityIncident"
+        }
+      ],
+      "Default": "LogLowSeverity"
+    },
+    "CreateCriticalIncident": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${CreateIncidentFunction}",
+        "Payload": {
+          "severity": "critical",
+          "incident_data": "$.incident_data",
+          "cloudwatch_metrics": "$.cloudwatch_metrics"
+        }
+      },
+      "Next": "TriggerImmediateResponse",
+      "Catch": [{
+        "ErrorEquals": ["States.ALL"],
+        "Next": "HandleError"
+      }]
+    },
+    "CreateHighPriorityIncident": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${CreateIncidentFunction}",
+        "Payload": {
+          "severity": "high",
+          "incident_data": "$.incident_data",
+          "cloudwatch_metrics": "$.cloudwatch_metrics"
+        }
+      },
+      "Next": "AnalyzeRootCause",
+      "Catch": [{
+        "ErrorEquals": ["States.ALL"],
+        "Next": "HandleError"
+      }]
+    },
+    "CreateMediumPriorityIncident": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${CreateIncidentFunction}",
+        "Payload": {
+          "severity": "medium",
+          "incident_data": "$.incident_data",
+          "cloudwatch_metrics": "$.cloudwatch_metrics"
+        }
+      },
+      "Next": "ScheduleAnalysis",
+      "Catch": [{
+        "ErrorEquals": ["States.ALL"],
+        "Next": "HandleError"
+      }]
+    },
+    "TriggerImmediateResponse": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${EmergencyResponseFunction}",
+        "Payload": {
+          "incident_id": "$.incident_id",
+          "severity": "critical",
+          "cloudwatch_metrics": "$.cloudwatch_metrics"
+        }
+      },
+      "Next": "AnalyzeRootCause",
+      "Catch": [{
+        "ErrorEquals": ["States.ALL"],
+        "Next": "HandleError"
+      }]
+    },
+    "AnalyzeRootCause": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${RootCauseAnalysisFunction}",
+        "Payload": {
+          "incident_id": "$.incident_id",
+          "metrics": "$.metrics",
+          "logs": "$.logs",
+          "cloudwatch_metrics": "$.cloudwatch_metrics"
+        }
+      },
+      "Next": "GenerateResolutionPlan",
+      "Catch": [{
+        "ErrorEquals": ["States.ALL"],
+        "Next": "HandleError"
+      }]
+    },
+    "GenerateResolutionPlan": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${ResolutionPlanFunction}",
+        "Payload": {
+          "incident_id": "$.incident_id",
+          "root_cause": "$.root_cause",
+          "severity": "$.severity",
+          "cloudwatch_metrics": "$.cloudwatch_metrics"
+        }
+      },
+      "Next": "ExecuteResolution",
+      "Catch": [{
+        "ErrorEquals": ["States.ALL"],
+        "Next": "HandleError"
+      }]
+    },
+    "ExecuteResolution": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${ResolutionExecutionFunction}",
+        "Payload": {
+          "incident_id": "$.incident_id",
+          "resolution_plan": "$.resolution_plan",
+          "cloudwatch_metrics": "$.cloudwatch_metrics"
+        }
+      },
+      "Next": "VerifyResolution",
+      "Catch": [{
+        "ErrorEquals": ["States.ALL"],
+        "Next": "HandleError"
+      }]
+    },
+    "VerifyResolution": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${ResolutionVerificationFunction}",
+        "Payload": {
+          "incident_id": "$.incident_id",
+          "metrics": "$.metrics",
+          "cloudwatch_metrics": "$.cloudwatch_metrics"
+        }
+      },
+      "Next": "UpdateIncidentStatus",
+      "Catch": [{
+        "ErrorEquals": ["States.ALL"],
+        "Next": "HandleError"
+      }]
+    },
+    "UpdateIncidentStatus": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${UpdateIncidentFunction}",
+        "Payload": {
+          "incident_id": "$.incident_id",
+          "status": "resolved",
+          "resolution_details": "$.resolution_details",
+          "cloudwatch_metrics": "$.cloudwatch_metrics"
+        }
+      },
+      "Next": "GenerateReport",
+      "Catch": [{
+        "ErrorEquals": ["States.ALL"],
+        "Next": "HandleError"
+      }]
+    },
+    "GenerateReport": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${ReportGenerationFunction}",
+        "Payload": {
+          "incident_id": "$.incident_id",
+          "resolution_details": "$.resolution_details",
+          "cloudwatch_metrics": "$.cloudwatch_metrics"
+        }
+      },
+      "End": true,
+      "Catch": [{
+        "ErrorEquals": ["States.ALL"],
+        "Next": "HandleError"
+      }]
+    },
+    "ScheduleAnalysis": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${ScheduleAnalysisFunction}",
+        "Payload": {
+          "incident_id": "$.incident_id",
+          "priority": "medium",
+          "cloudwatch_metrics": "$.cloudwatch_metrics"
+        }
+      },
+      "End": true,
+      "Catch": [{
+        "ErrorEquals": ["States.ALL"],
+        "Next": "HandleError"
+      }]
+    },
+    "LogLowSeverity": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${LoggingFunction}",
+        "Payload": {
+          "message": "Low severity anomaly detected",
+          "metrics": "$.metrics",
+          "cloudwatch_metrics": "$.cloudwatch_metrics"
+        }
+      },
+      "End": true,
+      "Catch": [{
+        "ErrorEquals": ["States.ALL"],
+        "Next": "HandleError"
+      }]
+    },
+    "HandleError": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${ErrorHandlingFunction}",
+        "Payload": {
+          "error": "$.error",
+          "context": "$.context",
+          "cloudwatch_metrics": "$.cloudwatch_metrics"
+        }
+      },
+      "End": true,
+      "Catch": [{
+        "ErrorEquals": ["States.ALL"],
+        "Next": "HandleError"
+      }]
+    }
+  }
+} 

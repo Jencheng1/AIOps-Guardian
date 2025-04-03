@@ -144,6 +144,244 @@ graph TD
     end
 ```
 
+## Step Functions Workflow
+
+```mermaid
+graph TD
+    A[Detect Anomaly] --> B{Check Severity}
+    B -->|Critical| C[Create Critical Incident]
+    B -->|High| D[Create High Priority Incident]
+    B -->|Medium| E[Create Medium Priority Incident]
+    B -->|Low| F[Log Low Severity]
+    
+    C --> G[Trigger Immediate Response]
+    G --> H[Analyze Root Cause]
+    D --> H
+    
+    H --> I[Generate Resolution Plan]
+    I --> J[Execute Resolution]
+    J --> K[Verify Resolution]
+    K --> L[Update Incident Status]
+    L --> M[Generate Report]
+    
+    E --> N[Schedule Analysis]
+    
+    style A fill:#f9f,stroke:#333,stroke-width:2px
+    style B fill:#bbf,stroke:#333,stroke-width:2px
+    style C fill:#f66,stroke:#333,stroke-width:2px
+    style D fill:#f96,stroke:#333,stroke-width:2px
+    style E fill:#ff9,stroke:#333,stroke-width:2px
+    style F fill:#9f9,stroke:#333,stroke-width:2px
+```
+
+## AWS Step Functions Integration
+
+```mermaid
+graph TD
+    subgraph "AWS CloudWatch"
+        A[Metrics] --> B[CloudWatch Alarms]
+        C[Logs] --> D[Log Groups]
+        E[Custom Metrics] --> F[Metric Streams]
+        G[Log Insights] --> H[Log Analytics]
+    end
+
+    subgraph "AWS EventBridge"
+        I[Event Bus] --> J[Rules]
+        J --> K[Scheduled Events]
+        J --> L[Event Patterns]
+        M[API Destinations]
+    end
+
+    subgraph "AWS Step Functions"
+        N[State Machine] --> O[Lambda Functions]
+        O --> P[Choice States]
+        P --> Q[Task States]
+    end
+
+    subgraph "AWS Lambda Functions"
+        R[Anomaly Detection]
+        S[Incident Creation]
+        T[Root Cause Analysis]
+        U[Resolution Planning]
+        V[Resolution Execution]
+        W[Verification]
+    end
+
+    subgraph "AWS Services"
+        X[AWS Bedrock]
+        Y[Amazon S3]
+        Z[DynamoDB]
+        AA[SNS Topics]
+    end
+
+    B --> N
+    D --> N
+    F --> N
+    H --> N
+    
+    K --> N
+    L --> N
+    
+    N --> R
+    R --> S
+    S --> T
+    T --> U
+    U --> V
+    V --> W
+    
+    R --> X
+    T --> X
+    U --> X
+    
+    S --> Z
+    W --> Z
+    
+    V --> Y
+    W --> Y
+    
+    S --> AA
+    V --> AA
+    
+    style N fill:#ff9900,stroke:#333,stroke-width:2px
+    style O fill:#ff9900,stroke:#333,stroke-width:2px
+    style P fill:#ff9900,stroke:#333,stroke-width:2px
+    style Q fill:#ff9900,stroke:#333,stroke-width:2px
+    style R fill:#ff9900,stroke:#333,stroke-width:2px
+    style S fill:#ff9900,stroke:#333,stroke-width:2px
+    style T fill:#ff9900,stroke:#333,stroke-width:2px
+    style U fill:#ff9900,stroke:#333,stroke-width:2px
+    style V fill:#ff9900,stroke:#333,stroke-width:2px
+    style W fill:#ff9900,stroke:#333,stroke-width:2px
+```
+
+## CloudWatch Metrics and Alarms
+
+```mermaid
+graph TD
+    subgraph "System Metrics"
+        A[CPU Utilization] --> B[Memory Usage]
+        C[Disk I/O] --> D[Network Traffic]
+        E[Request Rate] --> F[Error Rate]
+        G[Response Time] --> H[Queue Length]
+    end
+
+    subgraph "Business Metrics"
+        I[User Activity] --> J[Transaction Volume]
+        K[Revenue Impact] --> L[Customer Satisfaction]
+        M[Service Health] --> N[Resource Efficiency]
+    end
+
+    subgraph "Custom Metrics"
+        O[Anomaly Score] --> P[Incident Count]
+        Q[Resolution Time] --> R[MTTR]
+        S[Prediction Accuracy] --> T[False Positive Rate]
+    end
+
+    subgraph "Alarm Thresholds"
+        U[Critical: >90%] --> V[High: >80%]
+        W[Medium: >70%] --> X[Low: >60%]
+        Y[Custom Rules] --> Z[Composite Alarms]
+    end
+
+    style A fill:#ff9900,stroke:#333,stroke-width:2px
+    style B fill:#ff9900,stroke:#333,stroke-width:2px
+    style C fill:#ff9900,stroke:#333,stroke-width:2px
+    style D fill:#ff9900,stroke:#333,stroke-width:2px
+```
+
+## EventBridge Rules and Patterns
+
+```mermaid
+graph TD
+    subgraph "Scheduled Events"
+        A[Daily Health Check] --> B[Weekly Analysis]
+        C[Monthly Report] --> D[Quarterly Review]
+        E[Custom Schedules] --> F[Recurring Tasks]
+    end
+
+    subgraph "Event Patterns"
+        G[CloudWatch Alarms] --> H[API Gateway Events]
+        I[S3 Bucket Events] --> J[DynamoDB Streams]
+        K[Custom Events] --> L[Cross-Account Events]
+    end
+
+    subgraph "Rule Actions"
+        M[Step Functions] --> N[Lambda Functions]
+        O[SNS Topics] --> P[SQS Queues]
+        Q[EventBridge API] --> R[Custom Targets]
+    end
+
+    style A fill:#ff9900,stroke:#333,stroke-width:2px
+    style B fill:#ff9900,stroke:#333,stroke-width:2px
+    style C fill:#ff9900,stroke:#333,stroke-width:2px
+    style D fill:#ff9900,stroke:#333,stroke-width:2px
+```
+
+## Lambda Function Interactions
+
+```mermaid
+graph TD
+    subgraph "Anomaly Detection"
+        A[Collect Metrics] --> B[Preprocess Data]
+        B --> C[Apply ML Models]
+        C --> D[Calculate Scores]
+        D --> E[Generate Alerts]
+    end
+
+    subgraph "Incident Management"
+        F[Create Incident] --> G[Assign Priority]
+        G --> H[Notify Teams]
+        H --> I[Track Status]
+        I --> J[Update Records]
+    end
+
+    subgraph "Resolution Process"
+        K[Analyze Root Cause] --> L[Generate Plan]
+        L --> M[Execute Actions]
+        M --> N[Verify Results]
+        N --> O[Document Learnings]
+    end
+
+    style A fill:#ff9900,stroke:#333,stroke-width:2px
+    style B fill:#ff9900,stroke:#333,stroke-width:2px
+    style C fill:#ff9900,stroke:#333,stroke-width:2px
+    style D fill:#ff9900,stroke:#333,stroke-width:2px
+```
+
+## Monitoring and Alerting Flow
+
+```mermaid
+graph TD
+    subgraph "Data Collection"
+        A[System Metrics] --> B[Application Logs]
+        C[User Activity] --> D[Business Metrics]
+        E[Custom Data] --> F[External Sources]
+    end
+
+    subgraph "Analysis Pipeline"
+        G[Data Processing] --> H[Anomaly Detection]
+        I[Pattern Recognition] --> J[Trend Analysis]
+        K[Predictive Models] --> L[Risk Assessment]
+    end
+
+    subgraph "Alert Management"
+        M[Alert Generation] --> N[Severity Classification]
+        O[Alert Routing] --> P[Notification Channels]
+        Q[Alert Tracking] --> R[Resolution Monitoring]
+    end
+
+    subgraph "Response Actions"
+        S[Automated Actions] --> T[Manual Interventions]
+        U[Escalation Paths] --> V[Resolution Workflows]
+        W[Post-Mortem] --> X[Knowledge Base]
+    end
+
+    style A fill:#ff9900,stroke:#333,stroke-width:2px
+    style B fill:#ff9900,stroke:#333,stroke-width:2px
+    style C fill:#ff9900,stroke:#333,stroke-width:2px
+    style D fill:#ff9900,stroke:#333,stroke-width:2px
+```
+
 ## Features
 
 - Multi-agent system for incident management
