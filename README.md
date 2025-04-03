@@ -382,6 +382,93 @@ graph TD
     style D fill:#ff9900,stroke:#333,stroke-width:2px
 ```
 
+## Auto-Remediation with AWS SSM
+
+```mermaid
+graph TD
+    subgraph "Incident Detection"
+        A[Anomaly Detection] --> B[Incident Creation]
+        B --> C[Severity Assessment]
+        C --> D[Resource Identification]
+    end
+
+    subgraph "Remediation Planning"
+        E[Action Selection] --> F[Risk Assessment]
+        F --> G[Approval Flow]
+        G --> H[SSM Document Selection]
+    end
+
+    subgraph "Execution"
+        I[Pre-Remediation Check] --> J[Execute Action]
+        J --> K[Post-Remediation Check]
+        K --> L[Status Update]
+    end
+
+    subgraph "Verification"
+        M[Metrics Analysis] --> N[Health Check]
+        N --> O[Incident Resolution]
+        O --> P[Documentation]
+    end
+
+    style A fill:#ff9900,stroke:#333,stroke-width:2px
+    style B fill:#ff9900,stroke:#333,stroke-width:2px
+    style C fill:#ff9900,stroke:#333,stroke-width:2px
+    style D fill:#ff9900,stroke:#333,stroke-width:2px
+```
+
+### Auto-Remediation Features
+
+- **Automated Actions**:
+  - Instance Restart
+  - Auto Scaling Group Scale Up/Down
+  - RDS Backup and Recovery
+  - S3 Cleanup
+  - Custom Remediation Actions
+
+- **Safety Measures**:
+  - Pre and Post Remediation Checks
+  - Risk Assessment
+  - Approval Workflows
+  - Rollback Capabilities
+
+- **Integration**:
+  - AWS Systems Manager Documents
+  - CloudWatch Metrics
+  - SNS Notifications
+  - DynamoDB Status Tracking
+
+### Setup Instructions
+
+1. Install Ansible and required collections:
+   ```bash
+   pip install ansible
+   ansible-galaxy collection install -r ansible/requirements.yml
+   ```
+
+2. Configure AWS credentials:
+   ```bash
+   aws configure
+   ```
+
+3. Create SSM Document:
+   ```bash
+   aws ssm create-document \
+     --content file://ansible/ssm_documents/remediation_document.json \
+     --name "AIOpsGuardian-Remediation" \
+     --document-type "Command" \
+     --document-format "JSON"
+   ```
+
+4. Run remediation playbook:
+   ```bash
+   ansible-playbook ansible/playbooks/auto_remediation.yml \
+     -e "incident_id=INC-123" \
+     -e "severity=HIGH" \
+     -e "resource_id=i-1234567890abcdef0" \
+     -e "resource_type=EC2" \
+     -e "remediation_action=RESTART"
+   ```
+
 ## Features
 
 - Multi-agent system for incident management

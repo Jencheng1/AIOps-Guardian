@@ -1,0 +1,73 @@
+---
+- name: Auto-Remediation Playbook
+  hosts: localhost
+  gather_facts: false
+  vars:
+    aws_region: "{{ aws_region | default('us-west-2') }}"
+    incident_id: "{{ incident_id }}"
+    severity: "{{ severity }}"
+    resource_id: "{{ resource_id }}"
+    resource_type: "{{ resource_type }}"
+    remediation_action: "{{ remediation_action }}"
+    ssm_document_name: "{{ ssm_document_name | default('AIOpsGuardian-Remediation') }}"
+
+  tasks:
+    - name: Get AWS SSM Document
+      amazon.aws.ssm_document_info:
+        name: "{{ ssm_document_name }}"
+        region: "{{ aws_region }}"
+      register: ssm_doc
+
+    - name: Execute SSM Document
+      amazon.aws.ssm_document_execution:
+        document_name: "{{ ssm_document_name }}"
+        parameters:
+          IncidentId: "{{ incident_id }}"
+          Severity: "{{ severity }}"
+          ResourceId: "{{ resource_id }}"
+          ResourceType: "{{ resource_type }}"
+          RemediationAction: "{{ remediation_action }}"
+        region: "{{ aws_region }}"
+      register: execution_result
+      when: ssm_doc.documents is defined and ssm_doc.documents | length > 0
+
+    - name: Update Incident Status
+      amazon.aws.dynamodb_table:
+        name: "AIOpsGuardian-Incidents"
+        region: "{{ aws_region }}"
+        operation: update_item
+        key:
+          IncidentId: "{{ incident_id }}"
+        attributes:
+          RemediationStatus: "{{ 'COMPLETED' if execution_result.status == 'SUCCESS' else 'FAILED' }}"
+          RemediationResult: "{{ execution_result.output }}"
+          LastUpdated: "{{ ansible_date_time.iso8601 }}"
+      when: execution_result is defined
+
+    - name: Send SNS Notification
+      amazon.aws.sns_topic:
+        region: "{{ aws_region }}"
+        topic_arn: "arn:aws:sns:{{ aws_region }}:{{ aws_account_id }}:AIOpsGuardian-Remediation"
+        message: |
+          Remediation executed for incident {{ incident_id }}
+          Status: {{ execution_result.status if execution_result is defined else 'FAILED' }}
+          Resource: {{ resource_id }}
+          Action: {{ remediation_action }}
+        subject: "AIOps Guardian - Remediation {{ execution_result.status if execution_result is defined else 'FAILED' }}"
+      when: execution_result is defined
+
+    - name: Log Remediation Result
+      amazon.aws.cloudwatch_log:
+        region: "{{ aws_region }}"
+        log_group: "/aws/aiops-guardian/remediation"
+        log_stream: "{{ incident_id }}"
+        message: |
+          {
+            "timestamp": "{{ ansible_date_time.iso8601 }}",
+            "incident_id": "{{ incident_id }}",
+            "resource_id": "{{ resource_id }}",
+            "remediation_action": "{{ remediation_action }}",
+            "status": "{{ execution_result.status if execution_result is defined else 'FAILED' }}",
+            "result": "{{ execution_result.output if execution_result is defined else 'No execution result' }}"
+          }
+      when: execution_result is defined 

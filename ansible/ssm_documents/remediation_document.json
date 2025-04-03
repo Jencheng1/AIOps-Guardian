@@ -1,0 +1,84 @@
+{
+  "schemaVersion": "2.2",
+  "description": "AIOps Guardian Auto-Remediation Document",
+  "parameters": {
+    "IncidentId": {
+      "type": "String",
+      "description": "Unique identifier for the incident"
+    },
+    "Severity": {
+      "type": "String",
+      "description": "Severity level of the incident",
+      "allowedValues": ["CRITICAL", "HIGH", "MEDIUM", "LOW"]
+    },
+    "ResourceId": {
+      "type": "String",
+      "description": "ID of the affected resource"
+    },
+    "ResourceType": {
+      "type": "String",
+      "description": "Type of the affected resource",
+      "allowedValues": ["EC2", "RDS", "S3", "LAMBDA", "API_GATEWAY", "ELB"]
+    },
+    "RemediationAction": {
+      "type": "String",
+      "description": "Type of remediation action to perform",
+      "allowedValues": ["RESTART", "SCALE_UP", "SCALE_DOWN", "BACKUP", "RECOVER", "CLEANUP"]
+    }
+  },
+  "mainSteps": [
+    {
+      "action": "aws:runShellScript",
+      "name": "PreRemediationCheck",
+      "inputs": {
+        "runCommand": [
+          "echo 'Starting pre-remediation checks for incident {{ IncidentId }}'",
+          "aws cloudwatch get-metric-statistics --namespace AWS/{{ ResourceType }} --metric-name CPUUtilization --dimensions Name=InstanceId,Value={{ ResourceId }} --start-time $(date -u +%Y-%m-%dT%H:%M:%S) --end-time $(date -u +%Y-%m-%dT%H:%M:%S) --period 300 --statistics Average"
+        ]
+      }
+    },
+    {
+      "action": "aws:runShellScript",
+      "name": "ExecuteRemediation",
+      "inputs": {
+        "runCommand": [
+          "case \"{{ RemediationAction }}\" in",
+          "  \"RESTART\")",
+          "    aws ec2 reboot-instances --instance-ids {{ ResourceId }}",
+          "    ;;",
+          "  \"SCALE_UP\")",
+          "    aws autoscaling set-desired-capacity --auto-scaling-group-name {{ ResourceId }} --desired-capacity $(($(aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names {{ ResourceId }} --query 'AutoScalingGroups[0].DesiredCapacity' --output text) + 1))",
+          "    ;;",
+          "  \"SCALE_DOWN\")",
+          "    aws autoscaling set-desired-capacity --auto-scaling-group-name {{ ResourceId }} --desired-capacity $(($(aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names {{ ResourceId }} --query 'AutoScalingGroups[0].DesiredCapacity' --output text) - 1))",
+          "    ;;",
+          "  \"BACKUP\")",
+          "    aws rds create-db-snapshot --db-instance-identifier {{ ResourceId }} --db-snapshot-identifier {{ IncidentId }}-backup",
+          "    ;;",
+          "  \"RECOVER\")",
+          "    aws rds restore-db-instance-from-db-snapshot --db-instance-identifier {{ ResourceId }}-recovered --db-snapshot-identifier {{ ResourceId }}-latest",
+          "    ;;",
+          "  \"CLEANUP\")",
+          "    aws s3 rm s3://{{ ResourceId }} --recursive",
+          "    ;;",
+          "esac"
+        ]
+      }
+    },
+    {
+      "action": "aws:runShellScript",
+      "name": "PostRemediationCheck",
+      "inputs": {
+        "runCommand": [
+          "echo 'Starting post-remediation checks for incident {{ IncidentId }}'",
+          "aws cloudwatch get-metric-statistics --namespace AWS/{{ ResourceType }} --metric-name CPUUtilization --dimensions Name=InstanceId,Value={{ ResourceId }} --start-time $(date -u +%Y-%m-%dT%H:%M:%S) --end-time $(date -u +%Y-%m-%dT%H:%M:%S) --period 300 --statistics Average"
+        ]
+      }
+    }
+  ],
+  "outputs": [
+    "PreRemediationCheck.Output",
+    "ExecuteRemediation.Output",
+    "PostRemediationCheck.Output"
+  ]
+} 
