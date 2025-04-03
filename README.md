@@ -19,6 +19,30 @@
 
 A comprehensive AIOps platform that leverages AWS Bedrock for intelligent incident management, root cause analysis, and automated operations.
 
+## Table of Contents
+
+1. [System Architecture](#system-architecture)
+2. [Deployment Architecture](#deployment-architecture)
+3. [Component Interaction](#component-interaction)
+4. [Infrastructure Components](#infrastructure-components)
+5. [GitOps Workflow](#gitops-workflow-with-argocd)
+6. [Helm Chart Structure](#helm-chart-structure)
+7. [Anomaly Detection](#anomaly-detection-flow)
+8. [Step Functions Workflow](#step-functions-workflow)
+9. [AWS Step Functions Integration](#aws-step-functions-integration)
+10. [CloudWatch Metrics](#cloudwatch-metrics-and-alarms)
+11. [EventBridge Rules](#eventbridge-rules-and-patterns)
+12. [Lambda Functions](#lambda-function-interactions)
+13. [Monitoring Flow](#monitoring-and-alerting-flow)
+14. [Auto-Remediation](#auto-remediation-with-ansible-and-aws-ssm)
+15. [Features](#features)
+16. [Vector Search](#vector-search-for-incident-similarity)
+17. [Project Structure](#project-structure)
+18. [Prerequisites](#prerequisites)
+19. [Setup Instructions](#setup-instructions)
+20. [Development](#development)
+21. [License](#license)
+
 ## System Architecture
 
 ```mermaid
@@ -618,6 +642,209 @@ graph TD
 - Automated incident resolution
 - Predictive maintenance
 
+## Vector Search for Incident Similarity
+
+The AIOps Guardian system implements advanced vector search capabilities using both traditional embeddings and BERT-based embeddings for incident similarity search. This dual-embedding approach provides enhanced semantic understanding and improved search accuracy.
+
+> **Integration Points**:
+> - Works with [Anomaly Detection](#anomaly-detection-flow) for incident pattern matching
+> - Integrates with [Knowledge Base](#component-interaction) for historical data
+> - Supports [Auto-Remediation](#auto-remediation-with-ansible-and-aws-ssm) through similar incident resolution
+> - Provides metrics for [CloudWatch Monitoring](#cloudwatch-metrics-and-alarms)
+
+### Architecture
+
+```mermaid
+graph TD
+    subgraph "Data Sources"
+        A1[CloudWatch Logs] --> A[Incident Data]
+        A2[CloudWatch Metrics] --> A
+        A3[System Events] --> A
+        A4[User Reports] --> A
+    end
+
+    subgraph "Processing Pipeline"
+        B[Text Preprocessing]
+        B1[Tokenization] --> B
+        B2[Cleaning] --> B
+        B3[Normalization] --> B
+    end
+
+    subgraph "Embedding Generation"
+        C[Traditional Embeddings]
+        D[BERT Embeddings]
+        D1[BERT-base] --> D
+        D2[BERT-large] --> D
+        D3[RoBERTa] --> D
+        D4[DistilBERT] --> D
+    end
+
+    subgraph "Vector Storage"
+        E[FAISS Index]
+        F[BERT FAISS Index]
+        G[DynamoDB]
+    end
+
+    subgraph "Search Interface"
+        H[Query Processing]
+        I[Traditional Search]
+        J[BERT Search]
+        K[Results Aggregation]
+        L[Similar Incidents]
+    end
+
+    subgraph "Integration Layer"
+        O[Anomaly Detection]
+        P[Knowledge Base]
+        Q[Auto-Remediation]
+        R[CloudWatch]
+        S[Step Functions]
+        T[Lambda Functions]
+    end
+
+    A --> B
+    B --> C
+    B --> D
+    C --> E
+    D --> F
+    E --> G
+    F --> G
+    G --> H
+    H --> I
+    H --> J
+    I --> K
+    J --> K
+    K --> L
+
+    O --> A
+    P --> A
+    Q --> L
+    R --> K
+    S --> L
+    T --> L
+
+    style A fill:#ff9900,stroke:#333,stroke-width:2px
+    style B fill:#ff9900,stroke:#333,stroke-width:2px
+    style C fill:#ff9900,stroke:#333,stroke-width:2px
+    style D fill:#ff9900,stroke:#333,stroke-width:2px
+    style E fill:#ff9900,stroke:#333,stroke-width:2px
+    style F fill:#ff9900,stroke:#333,stroke-width:2px
+    style G fill:#ff9900,stroke:#333,stroke-width:2px
+    style H fill:#ff9900,stroke:#333,stroke-width:2px
+    style I fill:#ff9900,stroke:#333,stroke-width:2px
+    style J fill:#ff9900,stroke:#333,stroke-width:2px
+    style K fill:#ff9900,stroke:#333,stroke-width:2px
+    style L fill:#ff9900,stroke:#333,stroke-width:2px
+```
+
+### Integration Examples
+
+1. **Anomaly Detection Integration**
+```python
+# Search for similar historical anomalies
+POST /api/v1/vector-search/search
+{
+    "query": "CPU utilization spike in production",
+    "k": 5,
+    "use_bert": true,
+    "model_type": "BERT_LARGE",
+    "filter": {
+        "type": "ANOMALY",
+        "severity": "HIGH",
+        "time_range": "LAST_30_DAYS"
+    },
+    "include_metrics": true,
+    "include_logs": true
+}
+```
+
+2. **Knowledge Base Integration**
+```python
+# Search knowledge base for similar incidents
+POST /api/v1/vector-search/search
+{
+    "query": "database connection pool exhaustion",
+    "k": 5,
+    "use_bert": true,
+    "model_type": "ROBERTA",
+    "source": "KNOWLEDGE_BASE",
+    "include_solutions": true,
+    "include_playbooks": true
+}
+```
+
+3. **Auto-Remediation Integration**
+```python
+# Find similar resolved incidents for auto-remediation
+POST /api/v1/vector-search/search
+{
+    "query": "high memory usage in production database",
+    "k": 5,
+    "use_bert": true,
+    "model_type": "BERT_LARGE",
+    "filter": {
+        "status": "RESOLVED",
+        "severity": "HIGH",
+        "has_remediation": true
+    },
+    "include_remediation_steps": true,
+    "include_verification": true
+}
+```
+
+4. **Step Functions Integration**
+```python
+# Search for similar incidents in workflow
+POST /api/v1/vector-search/search
+{
+    "query": "service degradation in user-facing API",
+    "k": 5,
+    "use_bert": true,
+    "model_type": "BERT_LARGE",
+    "workflow_id": "INC-123",
+    "include_workflow_state": true,
+    "include_actions_taken": true
+}
+```
+
+5. **Lambda Function Integration**
+```python
+# Search for similar incidents in Lambda context
+POST /api/v1/vector-search/search
+{
+    "query": "error rate spike in payment service",
+    "k": 5,
+    "use_bert": true,
+    "model_type": "BERT_LARGE",
+    "lambda_context": {
+        "function_name": "payment-processor",
+        "error_type": "TimeoutException",
+        "region": "us-west-2"
+    },
+    "include_error_patterns": true,
+    "include_stack_traces": true
+}
+```
+
+6. **CloudWatch Integration**
+```python
+# Search incidents with metric correlation
+POST /api/v1/vector-search/search
+{
+    "query": "high latency in API endpoints",
+    "k": 5,
+    "use_bert": true,
+    "model_type": "BERT_LARGE",
+    "metrics": {
+        "latency": ">500ms",
+        "error_rate": ">1%",
+        "time_range": "LAST_HOUR"
+    },
+    "include_metric_graphs": true,
+    "include_log_insights": true
+}
+```
+
 ## Project Structure
 
 ```
@@ -732,179 +959,3 @@ graph TD
 ## License
 
 MIT 
-
-## Vector Search for Incident Similarity
-
-The AIOps Guardian system implements advanced vector search capabilities using both traditional embeddings and BERT-based embeddings for incident similarity search. This dual-embedding approach provides enhanced semantic understanding and improved search accuracy.
-
-### Architecture
-
-```mermaid
-graph TD
-    A[Incident Data] --> B[Text Preprocessing]
-    B --> C[Traditional Embeddings]
-    B --> D[BERT Embeddings]
-    C --> E[FAISS Index]
-    D --> F[BERT FAISS Index]
-    G[Search Query] --> H[Query Processing]
-    H --> I[Traditional Search]
-    H --> J[BERT Search]
-    I --> K[Results Aggregation]
-    J --> K
-    K --> L[Similar Incidents]
-    M[DynamoDB] --> N[Incident Details]
-    L --> N
-```
-
-### Features
-
-1. **Dual Embedding System**
-   - Traditional embeddings for fast, general-purpose search
-   - BERT-based embeddings for deep semantic understanding
-   - Configurable embedding selection per query
-
-2. **BERT Integration**
-   - Uses BERT-base-uncased model for contextual understanding
-   - CLS token embeddings for document representation
-   - Cosine similarity for semantic matching
-   - Normalized embeddings for consistent comparison
-
-3. **Vector Search Capabilities**
-   - Semantic similarity search
-   - Hybrid search combining both embedding types
-   - Configurable similarity thresholds
-   - Real-time index updates
-
-### Example Queries
-
-1. **Basic BERT Search**
-```python
-# Search using BERT-base model
-POST /api/v1/vector-search/search
-{
-    "query": "high CPU usage causing service degradation",
-    "k": 5,
-    "use_bert": true,
-    "model_type": "BERT_BASE"
-}
-```
-
-2. **Hybrid Search**
-```python
-# Combine BERT and traditional search
-POST /api/v1/vector-search/search
-{
-    "query": "service latency spike in production",
-    "k": 5,
-    "use_bert": true,
-    "use_hybrid": true,
-    "hybrid_weight": 0.7,
-    "model_type": "BERT_LARGE"
-}
-```
-
-3. **Text Similarity**
-```python
-# Compare two incident descriptions
-POST /api/v1/vector-search/similarity
-{
-    "text1": "service latency spike in user-facing API",
-    "text2": "increased response time in production endpoints",
-    "model_type": "ROBERTA"
-}
-```
-
-### Monitoring Metrics
-
-The BERT integration includes comprehensive CloudWatch metrics:
-
-1. **Performance Metrics**
-   - `SearchDuration`: Time taken for search operations
-   - `SimilarityCalculationDuration`: Time for similarity calculations
-   - `IndexBuildDuration`: Time for index building/updating
-   - `QueryLength`: Length of search queries
-   - `ResultCount`: Number of results returned
-
-2. **Model Metrics**
-   - `ModelType`: Type of BERT model used
-   - `DocumentCount`: Number of documents in index
-   - `SimilarityScore`: Similarity scores between texts
-   - `UseHybrid`: Whether hybrid search was used
-   - `HybridWeight`: Weight used in hybrid search
-
-3. **Resource Metrics**
-   - `GPUUtilization`: GPU usage for BERT inference
-   - `MemoryUsage`: Memory consumption
-   - `BatchSize`: Size of embedding batches
-   - `CacheHitRate`: Cache hit rate for embeddings
-
-### Example CloudWatch Dashboard
-
-```json
-{
-    "widgets": [
-        {
-            "type": "metric",
-            "x": 0,
-            "y": 0,
-            "width": 12,
-            "height": 6,
-            "properties": {
-                "metrics": [
-                    ["AIOpsGuardian/BERT", "SearchDuration", "ModelType", "BERT_BASE"],
-                    ["AIOpsGuardian/BERT", "SearchDuration", "ModelType", "BERT_LARGE"],
-                    ["AIOpsGuardian/BERT", "SearchDuration", "ModelType", "ROBERTA"]
-                ],
-                "view": "timeSeries",
-                "stacked": false,
-                "region": "us-west-2",
-                "title": "Search Duration by Model"
-            }
-        },
-        {
-            "type": "metric",
-            "x": 12,
-            "y": 0,
-            "width": 12,
-            "height": 6,
-            "properties": {
-                "metrics": [
-                    ["AIOpsGuardian/BERT", "SimilarityScore"],
-                    [".", "SimilarityScore", "ModelType", "BERT_BASE"],
-                    [".", "SimilarityScore", "ModelType", "BERT_LARGE"]
-                ],
-                "view": "timeSeries",
-                "stacked": false,
-                "region": "us-west-2",
-                "title": "Similarity Scores by Model"
-            }
-        }
-    ]
-}
-```
-
-### Best Practices for BERT Integration
-
-1. **Model Selection**
-   - Use BERT-base for general-purpose search
-   - Use BERT-large for complex queries requiring deep understanding
-   - Use RoBERTa for better performance on longer texts
-   - Use DistilBERT for resource-constrained environments
-
-2. **Hybrid Search Configuration**
-   - Adjust hybrid weight based on query complexity
-   - Use higher BERT weight for semantic queries
-   - Use higher traditional weight for keyword-based queries
-   - Monitor performance metrics to optimize weights
-
-3. **Performance Optimization**
-   - Batch process embeddings for multiple documents
-   - Cache frequently used embeddings
-   - Use GPU acceleration when available
-   - Implement request rate limiting
-
-4. **Monitoring and Alerts**
-   - Set up CloudWatch alarms for high latency
-   - Monitor model performance metrics
-   - Track resource utilization
-   - Alert on error rates and failures
