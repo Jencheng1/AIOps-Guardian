@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: aiops-guardian
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/your-org/aiops-guardian.git
+    targetRevision: HEAD
+    path: helm/aiops-guardian
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: aiops-guardian
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+  wait:
+    healthCheck:
+      timeout: 300s
+  retry:
+    limit: 5
+    backoff:
+      duration: 5s
+      factor: 2
+      maxDuration: 3m 

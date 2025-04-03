@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sre-copilot-backend
+  namespace: sre-copilot
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: sre-copilot-backend
+  template:
+    metadata:
+      labels:
+        app: sre-copilot-backend
+    spec:
+      containers:
+      - name: backend
+        image: ${ECR_REPOSITORY_URI}:latest
+        ports:
+        - containerPort: 8000
+        env:
+        - name: AWS_REGION
+          value: us-west-2
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: aws-credentials
+              key: access-key-id
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: aws-credentials
+              key: secret-access-key
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 8000
+          initialDelaySeconds: 15
+          periodSeconds: 20
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sre-copilot-frontend
+  namespace: sre-copilot
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: sre-copilot-frontend
+  template:
+    metadata:
+      labels:
+        app: sre-copilot-frontend
+    spec:
+      containers:
+      - name: frontend
+        image: ${ECR_REPOSITORY_URI}:latest
+        ports:
+        - containerPort: 3000
+        env:
+        - name: REACT_APP_API_URL
+          value: "http://sre-copilot-backend:8000"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 3000
+          initialDelaySeconds: 15
+          periodSeconds: 20 

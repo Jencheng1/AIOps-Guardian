@@ -1,0 +1,58 @@
+{
+  "incidents": [
+    {
+      "id": "INC-001",
+      "title": "Database Connection Failure",
+      "severity": "high",
+      "status": "resolved",
+      "timestamp": "2024-03-20T10:10:00Z",
+      "description": "Database connection failed with timeout error",
+      "root_cause": "Network connectivity issue between application and database",
+      "impact": "User authentication and data retrieval affected",
+      "resolution": "Network configuration updated and connection restored",
+      "resolution_time": "2024-03-20T10:15:00Z",
+      "affected_services": ["user-service", "auth-service"],
+      "metrics": {
+        "response_time": 5000,
+        "error_rate": 100,
+        "affected_users": 1500
+      }
+    },
+    {
+      "id": "INC-002",
+      "title": "High CPU Usage Alert",
+      "severity": "medium",
+      "status": "resolved",
+      "timestamp": "2024-03-20T10:30:00Z",
+      "description": "CPU usage exceeded 90% threshold",
+      "root_cause": "Memory leak in background job processing",
+      "impact": "Slower application response times",
+      "resolution": "Memory leak fixed in job processor",
+      "resolution_time": "2024-03-20T10:40:00Z",
+      "affected_services": ["job-processor"],
+      "metrics": {
+        "cpu_usage": 92,
+        "memory_usage": 85,
+        "response_time": 300
+      }
+    },
+    {
+      "id": "INC-003",
+      "title": "API Endpoint Failure",
+      "severity": "high",
+      "status": "resolved",
+      "timestamp": "2024-03-20T10:20:00Z",
+      "description": "User API endpoint returning 500 errors",
+      "root_cause": "Null pointer exception in user service",
+      "impact": "User profile updates failing",
+      "resolution": "Null check added in user service",
+      "resolution_time": "2024-03-20T10:25:00Z",
+      "affected_services": ["user-service"],
+      "metrics": {
+        "error_rate": 50,
+        "affected_endpoints": 1,
+        "affected_users": 500
+      }
+    }
+  ]
+} 

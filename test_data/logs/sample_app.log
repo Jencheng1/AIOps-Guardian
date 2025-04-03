@@ -1,0 +1,15 @@
+2024-03-20T10:00:00Z INFO [app] Application started successfully
+2024-03-20T10:00:05Z INFO [app] Connected to database
+2024-03-20T10:00:10Z INFO [app] Cache initialized
+2024-03-20T10:05:00Z WARN [app] High memory usage detected: 85%
+2024-03-20T10:10:00Z ERROR [app] Database connection failed: Connection timeout
+2024-03-20T10:10:05Z ERROR [app] Failed to reconnect to database after 3 attempts
+2024-03-20T10:15:00Z INFO [app] Database connection restored
+2024-03-20T10:20:00Z ERROR [app] API endpoint /api/v1/users failed: 500 Internal Server Error
+2024-03-20T10:20:05Z ERROR [app] Stack trace: java.lang.NullPointerException at com.example.UserService.getUser
+2024-03-20T10:25:00Z INFO [app] API endpoint /api/v1/users recovered
+2024-03-20T10:30:00Z WARN [app] High CPU usage detected: 90%
+2024-03-20T10:35:00Z ERROR [app] Cache eviction failed: Out of memory
+2024-03-20T10:40:00Z INFO [app] Cache cleared and reinitialized
+2024-03-20T10:45:00Z WARN [app] High latency detected: 500ms
+2024-03-20T10:50:00Z INFO [app] Latency returned to normal: 50ms 

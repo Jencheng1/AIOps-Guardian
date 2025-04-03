@@ -1,0 +1,37 @@
+# HELP http_requests_total Total number of HTTP requests
+# TYPE http_requests_total counter
+http_requests_total{method="GET",endpoint="/api/v1/users",status="200"} 150
+http_requests_total{method="GET",endpoint="/api/v1/users",status="500"} 5
+http_requests_total{method="POST",endpoint="/api/v1/users",status="200"} 75
+http_requests_total{method="POST",endpoint="/api/v1/users",status="400"} 3
+
+# HELP http_request_duration_seconds HTTP request duration in seconds
+# TYPE http_request_duration_seconds histogram
+http_request_duration_seconds_bucket{le="0.1"} 200
+http_request_duration_seconds_bucket{le="0.5"} 220
+http_request_duration_seconds_bucket{le="1.0"} 225
+http_request_duration_seconds_bucket{le="+Inf"} 230
+
+# HELP node_cpu_seconds_total Total CPU time in seconds
+# TYPE node_cpu_seconds_total counter
+node_cpu_seconds_total{mode="idle"} 1000
+node_cpu_seconds_total{mode="user"} 500
+node_cpu_seconds_total{mode="system"} 200
+node_cpu_seconds_total{mode="iowait"} 50
+
+# HELP node_memory_bytes_total Total memory in bytes
+# TYPE node_memory_bytes_total gauge
+node_memory_bytes_total{type="total"} 8589934592
+node_memory_bytes_total{type="used"} 6442450944
+node_memory_bytes_total{type="free"} 2147483648
+
+# HELP node_disk_io_seconds_total Total disk I/O time in seconds
+# TYPE node_disk_io_seconds_total counter
+node_disk_io_seconds_total{device="sda",operation="read"} 100
+node_disk_io_seconds_total{device="sda",operation="write"} 150
+
+# HELP application_errors_total Total number of application errors
+# TYPE application_errors_total counter
+application_errors_total{type="database"} 5
+application_errors_total{type="cache"} 3
+application_errors_total{type="api"} 8 
